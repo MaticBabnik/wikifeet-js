@@ -1,14 +1,32 @@
 {
-  "name": "wikifeet-js",
-  "version": "1.0.0",
-  "description": "The ultimate coomer module",
-  "main": "index.js",
-  "scripts": {"test": "node test.js"},
-  "keywords": ["feet","wikifeet","coomer"],
-  "author": "Matic Babnik",
-  "license": "MIT",
-  "readme": "readme.md",
-  "dependencies": {
-    "needle": "^2.6.0"
-  }
+    "name": "wikifeet-js",
+    "author": "Matic Babnik",
+    "description": "Wikifeet scraper",
+    "version": "2.0.0",
+    "keywords": [
+        "feet",
+        "wikifeet"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/MaticBabnik/wikifeet-js.git"
+    },
+    "homepage": "https://github.com/MaticBabnik/wikifeet-js",
+    "license": "MIT",
+    "readme": "readme.md",
+    "type": "module",
+    "main": "index.js",
+    "types": "index.d.ts",
+    "files": [
+        "index.js",
+        "index.d.ts",
+        "readme.md"
+    ],
+    "scripts": {
+        "test": "node test.js"
+    },
+    "dependencies": {
+        "jsdom": "^24.1.1",
+        "linkedom": "^0.18.4"
+    }
 }

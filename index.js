@@ -1,47 +1,65 @@
-const needle = require('needle');
+import { parseHTML } from "linkedom";
 
-const searchRegex = /\.value='(.*?)';parent.location='\/' \+ encodeURI\('(.*?)'\)/g
-const dataRegex = /messanger\['gdata'\] \= (\[.*?\]);/
+const WIKIFEET = "https://www.wikifeet.com";
+const TAGS_REGEX = /messanger\['tagname'\] = (\{.*\});\n/;
+const PICTURES_REGEX = /messanger\['gdata'\] = (\[.*\]);\n/;
 
-/**
- * Searches for people
- * @param {string} query The search query
- * @returns {[{name:string,safeName:string,url:string}]} Array of results
- */
-async function search(query) {
-    const response = await needle('get',`https://www.wikifeet.com/perl/ajax.fpl?req=suggest&gender=undefined&value=${encodeURIComponent(query)}`);
-    const results = response.body.replace(/\\/g,'').matchAll(searchRegex);
-    
-    return Array.from(results).map(x=>({name:x[1],safeName:x[2].replace(/\W/g,'').replace(/_| /g,'-'),url:`https://www.wikifeet.com/${encodeURIComponent(x[2])}`}));
-}
-/**
- * Gets links to all the thumbnails of a person's pictures.
- * @param {{name:string,safeName:string,url:string}} person 
- * @returns {[string]} Array of URLs
- */
-async function getThumbnails(person) {
-    const response = await needle('get',person.url);
+const THUMB_URL = (pid) => `https://thumbs.wikifeet.com/${pid}.jpg`;
+const IMG_URL = (slug, pid) =>
+    `https://pics.wikifeet.com/${slug}-feet-${pid}.jpg`;
 
-    return JSON.parse(response.body.match(dataRegex)[1]).map(x=>`https://thumbs.wikifeet.com/${x.pid}.jpg`);
-}
+export async function search(query) {
+    const res = await fetch(`${WIKIFEET}/perl/ajax.fpl`, {
+        headers: {
+            accept: "*/*",
+            cookie: "wikifeetab=0; cookieconsent_status=dismiss",
+            Referer: WIKIFEET,
+            "content-type": "application/x-www-form-urlencoded",
+            "Referrer-Policy": "strict-origin-when-cross-origin",
+        },
+        body: `req=suggest&value=${encodeURIComponent(query)}`,
+        method: "POST",
+    });
 
-function getImageURL(person,id) {
-    return `https://pics.wikifeet.com/${person.safeName}-feet-${id}.jpg`    
-}
+    const { document } = parseHTML(await res.text());
 
-/**
- * Gets links to all of the person's pictures
- * @param {{name:string,safeName:string,url:string}} person 
- * @returns {[string]} Array of URLs
- */
-async function getImages(person) {
-    const response = await needle('get',person.url);
+    const results = [...document.getElementsByTagName("a")];
 
-    return JSON.parse(response.body.match(dataRegex)[1]).map(x=>getImageURL(person,x.pid));
+    return results.map((anchor) => {
+        const name = anchor.innerText.trim();
+        const url = new URL(anchor.href, WIKIFEET);
+
+        return {
+            slug: url.pathname.substring(1),
+            url: url.toString(),
+            name,
+        };
+    });
 }
 
-module.exports = {
-    search,
-    getImages,
-    getThumbnails
+export async function page(person) {
+    const res = await fetch(person.url, {
+        headers: {
+            accept: "*/*",
+            cookie: "wikifeetab=0; cookieconsent_status=dismiss",
+            Referer: WIKIFEET,
+        },
+    });
+
+    const text = await res.text();
+
+    const tagMap = JSON.parse(text.match(TAGS_REGEX)?.[1] ?? {});
+
+    const images = JSON.parse(text.match(PICTURES_REGEX)[1]).map((x) => ({
+        id: x.pid,
+        thumb: THUMB_URL(x.pid),
+        image: IMG_URL(person.slug, x.pid),
+        resolution: [x.pw, x.ph],
+        tags: x.tags
+            .split("")
+            .map((tag) => tagMap[tag])
+            .filter((x) => x),
+    }));
+
+    return { images, tags: Object.values(tagMap) };
 }

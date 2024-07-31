@@ -1,18 +1,19 @@
-# Wikifeet-js
-The ultimate coomer module. Helps you find them feet.
+# `wikifeet-js`
 
-### How to use?
+![NPM Version](https://img.shields.io/npm/v/wikifeet-js?style=for-the-badge)
+![NPM Size](https://img.shields.io/bundlephobia/min/wikifeet-js?style=for-the-badge)
+![NPM Downloads](https://img.shields.io/npm/dy/wikifeet-js?style=for-the-badge)
+
+Wikifeet scraper
+
+## Usage
+
 ```js
-const wikifeet = require('wikifeet-js');
+import * as wikifeet from "./index.js";
 
-async function main() {
-    let pokimane = (await wikifeet.search('pokimane'))[0];
-    let pics = await wikifeet.getImages(pokimane);
+const pokimane = (await wikifeet.search("pokimane"))[0];
+console.log({ pokimane });
 
-    let random = 0 | (pics.length * Math.random());
-
-    console.log(`Pokimane feet pic of the day: ${pics[random]}`);    
-}
-
-main();
+const page = await wikifeet.page(pokimane);
+console.log(page);
 ```
