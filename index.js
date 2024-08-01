@@ -46,7 +46,7 @@ function parseSeeAlso(div) {
     const name = div.querySelector("div").innerText;
     const slug = div.querySelector("a").href.substring(1);
     const thumbs = [...div.querySelectorAll(".triplepics div")].map((x) =>
-        x.style.backgroundImage.slice(5, -2)
+        x.style.backgroundImage.slice(4, -1)
     );
 
     return {
