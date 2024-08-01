@@ -12,8 +12,8 @@ Wikifeet scraper
 import * as wikifeet from "./index.js";
 
 const pokimane = (await wikifeet.search("pokimane"))[0];
-console.log({ pokimane });
+console.log({ pokimane }); 
 
-const page = await wikifeet.page(pokimane);
+const page = await wikifeet.page(pokimane, /*allowNsfw=*/false);
 console.log(page);
 ```

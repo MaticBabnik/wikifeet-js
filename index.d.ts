@@ -1,11 +1,13 @@
 declare module "wikifeet-js" {
-
     export interface Person {
         slug: string;
-        url: string;
         name: string;
     }
-    
+
+    export interface SeeAlso extends Person {
+        thumbs: string[]
+    }
+
     export interface Image {
         id: number;
         thumb: string;
@@ -13,7 +15,27 @@ declare module "wikifeet-js" {
         resolution: [number, number];
         tags: string[];
     }
-    
+
+    export interface RatingData {
+        average: number;
+        votes: Record<1 | 2 | 3 | 4 | 5, number>;
+        count: number;
+    }
+
+    export interface Page {
+        url: string;
+        name: string;
+        isNsfw: boolean;
+        rating: RatingData;
+        shoeSize: string;
+        birthplace: string;
+        birthDate: string;
+        images: Image[];
+        tags: string[];
+        seeAlso: SeeAlso[];
+    }
+
     export function search(query: string): Promise<Person[]>;
-    export function page(person: Person): Promise<{ images: Image[]; tags: string[] }>;
+    export function page(person: Person, allowNsfw = true): Promise<Page>;
+    export function page(slug: string, allowNsfw = true): Promise<Page>;
 }
