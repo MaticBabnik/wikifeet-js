@@ -95,18 +95,22 @@ export async function page(personOrSlug, allowNsfw = true) {
     let url = `${BASE}/${slug}`;
     const res = await fetch(url, { headers: HEADERS });
     let html = await res.text();
-    let isNsfw = false;
+    
+    const isNsfw = html.includes(CONTENT_WARNING);
+    const isMale = html.includes(CONTENT_MALE);
 
-    if (html.includes(CONTENT_WARNING) || html.includes(CONTENT_MALE)) {
+    if (isNsfw || isMale) {
         // male site doesn't seperate nsfw content
         if (!allowNsfw) throw new Error("NSFW content is disabled");
-        url =`${html.includes(CONTENT_WARNING)? BASE_NSFW : BASE_MALE}/${slug}`;
+        url = `${html.includes(CONTENT_WARNING) ? BASE_NSFW : BASE_MALE}/${slug}`;
         const res = await fetch(url, { headers: HEADERS });
         html = await res.text();
-        isNsfw = true;
     }
+
     const personPage = parsePageHtml(html, slug);
-    personPage.isNsfw = isNsfw;
     personPage.url = url;
+    personPage.isNsfw = isNsfw;
+    personPage.isPotentiallyNsfw = isMale;
+    
     return personPage;
 }

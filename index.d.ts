@@ -1,10 +1,15 @@
 declare module "wikifeet-js" {
-    export interface Person {
+    export interface SearchResult {
         slug: string;
         name: string;
     }
 
-    export interface SeeAlso extends Person {
+    /**
+     * @deprecated
+     */
+    export type Person = SearchResult;
+
+    export interface SeeAlso extends SearchResult {
         thumbs: string[]
     }
 
@@ -25,7 +30,6 @@ declare module "wikifeet-js" {
     export interface Page {
         url: string;
         name: string;
-        isNsfw: boolean;
         rating: RatingData;
         shoeSize: string;
         birthplace: string;
@@ -33,9 +37,34 @@ declare module "wikifeet-js" {
         images: Image[];
         tags: string[];
         seeAlso: SeeAlso[];
+
+        /**
+         * True when a page is 100% NSFW
+         */
+        isNsfw: boolean;
+
+        /**
+         * True when a page __can__ be NSFW (aka. page is from men.wikifeet.com)
+         */
+        isPotentiallyNsfw: boolean;
     }
 
-    export function search(query: string): Promise<Person[]>;
-    export function page(person: Person, allowNsfw?: boolean): Promise<Page>;
+    /**
+     * Search all instances of wikifeet for a profile.
+     */
+    export function search(query: string): Promise<SearchResult[]>;
+
+    /**
+     * Fetch a profile page 
+     * @param person A search result record
+     * @param allowNsfw Allow NSFW results (all men are considered NSFW)
+     */
+    export function page(person: SearchResult, allowNsfw?: boolean): Promise<Page>;
+    
+    /**
+     * Fetch a profile page 
+     * @param slug Unique identifier of the person
+     * @param allowNsfw Allow NSFW results (all men are considered NSFW)
+     */
     export function page(slug: string, allowNsfw?: boolean): Promise<Page>;
 }
