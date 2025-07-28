@@ -1,74 +1,44 @@
-import { parseHTML } from "linkedom";
-
-const BASE = "https://www.wikifeet.com";
-const BASE_NSFW = "https://www.wikifeetx.com";
-const CONTENT_WARNING = `<br><span style='color:#800; font-size:14pt'>WARNING: CONTAINS ADULT CONTENT</span><br>`;
-const TAGS_REGEX = /messanger\['tagname'\] = (\{.*\});\n/;
-const PICTURES_REGEX = /messanger\['gdata'\] = (\[.*\]);\n/;
+const BASE = "https://wikifeet.com";
+const BASE_NSFW = "https://wikifeetx.com";
+const CONTENT_WARNING = `WARNING: wikiFeet X contains adult content!`;
+const DATA_REGEX = /tdata = (\{.*\});\n/;
 const HEADERS = {
     accept: "*/*",
     cookie: "wikifeetab=0; cookieconsent_status=dismiss",
     Referer: BASE,
 };
-const TOTAL_RATINGS_REGEX = /\((\d+) total votes\)/;
+const TAG_MAP = {
+    T: 'Toes',
+    S: 'Soles',
+    A: 'Arches',
+    C: 'Close-up',
+    B: 'Barefoot',
+    N: 'Nylons'
+}
 
 const THUMB_URL = (pid) => `https://thumbs.wikifeet.com/${pid}.jpg`;
 const IMG_URL = (slug, pid) =>
     `https://pics.wikifeet.com/${slug}-feet-${pid}.jpg`;
 
 export async function search(query) {
-    const res = await fetch(`${BASE}/perl/ajax.fpl`, {
-        headers: {
-            ...HEADERS,
-            "content-type": "application/x-www-form-urlencoded",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-        },
-        body: `req=suggest&value=${encodeURIComponent(query)}`,
+    // suggest also returns nsfw results - /search/ requires parsing thre results from script tags
+    const form = new FormData()
+    form.append('query', query)
+    const res = await fetch(`${BASE}/api/suggest`, {
+        body: form,
         method: "POST",
     });
 
-    const { document } = parseHTML(await res.text());
-
-    const results = [...document.getElementsByTagName("a")];
-
-    return results.map((anchor) => {
-        const name = anchor.innerText.trim();
-        const url = new URL(anchor.href, BASE);
-
+    const results = (await res.json())[0][1].searchresults
+    return results.map((r) => {
         return {
-            slug: url.pathname.substring(1),
-            name,
+            slug: r.fetchname,
+            name: r.name,
         };
     });
 }
 
-function parseSeeAlso(div) {
-    const name = div.querySelector("div").innerText;
-    const slug = div.querySelector("a").href.substring(1);
-    const thumbs = [...div.querySelectorAll(".triplepics div")].map((x) =>
-        x.style.backgroundImage.slice(4, -1)
-    );
-
-    return {
-        name,
-        slug,
-        thumbs,
-    };
-}
-
-function parseRatings(ratingsDiv) {
-    const votes = Object.fromEntries(
-        Object.entries(
-            [...ratingsDiv.children[1].children] // second element's children
-                .map((x) =>
-                    parseInt(
-                        x.children[0].childNodes[0].textContent, // each child's first child contains a textNode (number)
-                        10
-                    )
-                )
-        ).map(([k, v]) => [5 - k, v]) // turn zero-based indexes into ammount of stars
-    );
-
+function parseRatings(votes) {
     const count = Object.values(votes).reduce((p, c) => p + c, 0);
     const sum = Object.entries(votes).reduce(
         (p, [stars, cnt]) => p + stars * cnt,
@@ -83,41 +53,26 @@ function parseRatings(ratingsDiv) {
 }
 
 function parsePageHtml(html, slug) {
-    const tagMap = JSON.parse(html.match(TAGS_REGEX)?.[1] ?? {});
-
-    const images = JSON.parse(html.match(PICTURES_REGEX)[1]).map((x) => ({
+    const data = JSON.parse(html.match(DATA_REGEX)[1])
+    const images = data.gallery.map((x) => ({
         id: x.pid,
         thumb: THUMB_URL(x.pid),
         image: IMG_URL(slug, x.pid),
         resolution: [x.pw, x.ph],
-        tags: x.tags
-            .split("")
-            .map((tag) => tagMap[tag])
-            .filter((x) => x),
+        tags: x.tags.split``.map(t => TAG_MAP[t])
     }));
 
-    const { document } = parseHTML(html);
-
-    const name = document.querySelector("h1").innerText;
-    const shoeSize = document
-        .getElementById("ssize_label")
-        .childNodes[0].textContent.trim();
-    const birthplace = document
-        .getElementById("nation_label")
-        .childNodes[0].textContent.trim();
-    const birthDate = document
-        .getElementById("bdate_label")
-        .childNodes[0].textContent.trim();
-
-    const rating = parseRatings(
-        document.querySelector(
-            "#content > div.round10 > div:nth-child(2) > div:nth-child(2)"
-        )
-    );
-
-    const seeAlso = [...document.querySelectorAll(".widget")].map((x) =>
-        parseSeeAlso(x)
-    );
+    const name = data.cname
+    const shoeSize = data.ssize
+    const birthplace = data.bplace
+    const birthDate = new Date(data.bdate).toLocaleDateString()
+    const rating = parseRatings(data.edata.stats)
+    const seeAlso = JSON.parse(html.match(/(?:\["Similars",)(\[.*?\])(:?\]\])/)[1]) // Related results are stored in a seperate line..
+        .map(({ name, fetchname, pics }) => ({
+            name,
+            slug: fetchname,
+            thumbs: pics
+        }))
 
     return {
         name,
@@ -126,7 +81,7 @@ function parsePageHtml(html, slug) {
         birthDate,
         birthplace,
         images,
-        tags: Object.values(tagMap),
+        tags: Object.values(TAG_MAP),
         seeAlso,
     };
 }
@@ -146,7 +101,6 @@ export async function page(personOrSlug, allowNsfw = true) {
         html = await res.text();
         isNsfw = true;
     }
-
     const personPage = parsePageHtml(html, slug);
     personPage.isNsfw = isNsfw;
     personPage.url = url;
