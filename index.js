@@ -68,11 +68,11 @@ function parsePageHtml(html, slug) {
     const birthDate = new Date(data.bdate).toLocaleDateString()
     const rating = parseRatings(data.edata.stats)
     const seeAlso = JSON.parse(html.match(/(?:\["Similars",)(\[.*?\])(:?\]\])/)[1]) // Related results are stored in a seperate line..
-    .map(({ name, fetchname, pics}) => ({
-        name,
-        slug: fetchname,
-        thumbs: pics
-    }))
+        .map(({ name, fetchname, pics }) => ({
+            name,
+            slug: fetchname,
+            thumbs: pics
+        }))
 
     return {
         name,

@@ -36,6 +36,6 @@ declare module "wikifeet-js" {
     }
 
     export function search(query: string): Promise<Person[]>;
-    export function page(person: Person, allowNsfw = true): Promise<Page>;
-    export function page(slug: string, allowNsfw = true): Promise<Page>;
+    export function page(person: Person, allowNsfw?: boolean): Promise<Page>;
+    export function page(slug: string, allowNsfw?: boolean): Promise<Page>;
 }

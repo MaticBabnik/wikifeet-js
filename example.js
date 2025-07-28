@@ -4,4 +4,4 @@ const pokimane = (await wikifeet.search("pokimane"))[0];
 console.log({ pokimane });
 
 const page = await wikifeet.page(pokimane);
-console.log(page);
+console.dir(page, { depth: null });
