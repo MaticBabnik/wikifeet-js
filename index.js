@@ -1,6 +1,8 @@
 const BASE = "https://wikifeet.com";
 const BASE_NSFW = "https://wikifeetx.com";
+const BASE_MALE = "https://men.wikifeet.com";
 const CONTENT_WARNING = `WARNING: wikiFeet X contains adult content!`;
+const CONTENT_MALE = `it can be found on our sister-site, wikiFeet Men`;
 const DATA_REGEX = /tdata = (\{.*\});\n/;
 const HEADERS = {
     accept: "*/*",
@@ -34,6 +36,7 @@ export async function search(query) {
         return {
             slug: r.fetchname,
             name: r.name,
+            gender: r.gender,
         };
     });
 }
@@ -92,17 +95,22 @@ export async function page(personOrSlug, allowNsfw = true) {
     let url = `${BASE}/${slug}`;
     const res = await fetch(url, { headers: HEADERS });
     let html = await res.text();
-    let isNsfw = false;
+    
+    const isNsfw = html.includes(CONTENT_WARNING);
+    const isMale = html.includes(CONTENT_MALE);
 
-    if (html.includes(CONTENT_WARNING)) {
+    if (isNsfw || isMale) {
+        // male site doesn't seperate nsfw content
         if (!allowNsfw) throw new Error("NSFW content is disabled");
-        url = `${BASE_NSFW}/${slug}`;
+        url = `${html.includes(CONTENT_WARNING) ? BASE_NSFW : BASE_MALE}/${slug}`;
         const res = await fetch(url, { headers: HEADERS });
         html = await res.text();
-        isNsfw = true;
     }
+
     const personPage = parsePageHtml(html, slug);
-    personPage.isNsfw = isNsfw;
     personPage.url = url;
+    personPage.isNsfw = isNsfw;
+    personPage.isPotentiallyNsfw = isMale;
+    
     return personPage;
 }
